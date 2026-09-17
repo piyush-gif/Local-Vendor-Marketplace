@@ -97,4 +97,4 @@ def remove_cart_item(
 
     db.delete(item)
     db.commit()
-    return {"message": "Item removed from cart"}
+    return {"message": "Item removed from cart"}  
