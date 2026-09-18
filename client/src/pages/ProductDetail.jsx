@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getProduct } from "@/lib/products";
 import { getVendor } from "@/lib/vendors";
 import { addToCart } from "@/lib/cart";
-
+import { useCartStore } from "@/store/cartStore";
 export default function ProductDetail() {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ export default function ProductDetail() {
   const [vendor, setVendor] = useState(null);
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
-
+  const increment = useCartStore((s) => s.increment);
   useEffect(() => {
     getProduct(productId).then((p) => {
       setProduct(p);
@@ -25,6 +25,7 @@ export default function ProductDetail() {
     setAdding(true);
     try {
       await addToCart(product.id, 1);
+      increment(1);
       setAdded(true);
     } finally {
       setAdding(false);
@@ -36,7 +37,7 @@ export default function ProductDetail() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-4 pb-20">
-      <div className="aspect-square bg-muted rounded-2xl overflow-hidden mb-4">
+      <div className="aspect-square md:aspect-auto md:h-80 bg-muted rounded-2xl overflow-hidden mb-4">
         {product.image_url && (
           <img
             src={product.image_url}

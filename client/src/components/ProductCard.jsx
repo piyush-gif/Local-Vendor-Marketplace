@@ -3,15 +3,16 @@ import { ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { addToCart } from "@/lib/cart";
 import { useState } from "react";
-
+import { useCartStore } from "@/store/cartStore";
 export default function ProductCard({ product }) {
   const [adding, setAdding] = useState(false);
-
+  const increment = useCartStore((s) => s.increment);
   async function handleAdd(e) {
     e.preventDefault();
     setAdding(true);
     try {
       await addToCart(product.id, 1);
+      increment(1);
     } finally {
       setAdding(false);
     }

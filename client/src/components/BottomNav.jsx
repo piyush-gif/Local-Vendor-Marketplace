@@ -1,14 +1,39 @@
 import { NavLink } from "react-router-dom";
-import { Home, ShoppingCart, Package, User } from "lucide-react";
-
-const items = [
-  { to: "/", icon: Home, label: "Home" },
-  { to: "/cart", icon: ShoppingCart, label: "Cart" },
-  { to: "/orders", icon: Package, label: "Orders" },
-  { to: "/profile", icon: User, label: "Profile" },
-];
-
+import {
+  Home,
+  ShoppingCart,
+  Package,
+  LayoutDashboard,
+  Store,
+  Users,
+} from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
+import { useEffect } from "react";
+import { useCartStore } from "@/store/cartStore";
 export default function BottomNav() {
+  const { count, refreshCount } = useCartStore();
+
+  const { user } = useAuthStore();
+
+  let items = [{ to: "/", icon: Home, label: "Home" }];
+  useEffect(() => {
+    if (user?.role === "buyer") refreshCount();
+  }, [user]);
+  if (user?.role === "buyer") {
+    items = [
+      { to: "/", icon: Home, label: "Home" },
+      { to: "/cart", icon: ShoppingCart, label: "Cart" },
+      { to: "/orders", icon: Package, label: "Orders" },
+    ];
+  } else if (user?.role === "vendor") {
+    items = [
+      { to: "/vendor/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+      { to: "/vendor/products", icon: Store, label: "Products" },
+    ];
+  } else if (user?.role === "admin") {
+    items = [{ to: "/admin/dashboard", icon: Users, label: "Dashboard" }];
+  }
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border flex justify-around py-2 md:hidden">
       {items.map(({ to, icon: Icon, label }) => (
@@ -21,7 +46,14 @@ export default function BottomNav() {
             }`
           }
         >
-          <Icon className="w-5 h-5" />
+          <span className="relative">
+            <Icon className="w-5 h-5" />
+            {to === "/cart" && count > 0 && (
+              <span className="absolute -top-1 -right-2 bg-primary text-primary-foreground text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                {count}
+              </span>
+            )}
+          </span>
           {label}
         </NavLink>
       ))}

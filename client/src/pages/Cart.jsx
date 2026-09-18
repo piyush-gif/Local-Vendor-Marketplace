@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { getCarts, updateCartItem, removeCartItem } from "@/lib/cart";
 import { getProduct } from "@/lib/products";
 import { getVendor } from "@/lib/vendors";
-
+import { useCartStore } from "@/store/cartStore";
 export default function CartPage() {
   const [carts, setCarts] = useState([]);
   const [productsById, setProductsById] = useState({});
   const [vendorsById, setVendorsById] = useState({});
   const [initialLoading, setInitialLoading] = useState(true);
-
+  const refreshCount = useCartStore((s) => s.refreshCount);
   async function loadCarts() {
     const data = await getCarts();
     setCarts(data);
@@ -78,6 +78,7 @@ export default function CartPage() {
       </div>
     );
   }
+  refreshCount();
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-4 pb-20 space-y-6">
