@@ -1,24 +1,29 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getProducts } from "@/lib/products";
+import { getVendor } from "@/lib/vendors";
 import ProductCard from "@/components/ProductCard";
 
 export default function VendorStore() {
   const { vendorId } = useParams();
   const [products, setProducts] = useState([]);
+  const [vendor, setVendor] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getProducts({ vendor_id: vendorId })
-      .then(setProducts)
+    Promise.all([getProducts({ vendor_id: vendorId }), getVendor(vendorId)])
+      .then(([prods, vend]) => {
+        setProducts(prods);
+        setVendor(vend);
+      })
       .finally(() => setLoading(false));
   }, [vendorId]);
 
-  const vendorName = products[0]?.vendor_id === Number(vendorId) ? null : null;
-
   return (
     <div className="max-w-6xl mx-auto px-4 py-4 pb-20">
-      <h1 className="font-heading text-xl font-semibold mb-4">Shop products</h1>
+      <h1 className="font-heading text-xl font-semibold mb-4">
+        {vendor?.shop_name || "Shop"}
+      </h1>
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading...</p>
       ) : (

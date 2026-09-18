@@ -4,43 +4,71 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getCarts, updateCartItem, removeCartItem } from "@/lib/cart";
 import { getProduct } from "@/lib/products";
+import { getVendor } from "@/lib/vendors";
 
 export default function CartPage() {
   const [carts, setCarts] = useState([]);
   const [productsById, setProductsById] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [vendorsById, setVendorsById] = useState({});
+  const [initialLoading, setInitialLoading] = useState(true);
 
   async function loadCarts() {
-    setLoading(true);
     const data = await getCarts();
     setCarts(data);
 
-    const ids = [
+    const productIds = [
       ...new Set(data.flatMap((c) => c.items.map((i) => i.product_id))),
     ];
-    const fetched = await Promise.all(ids.map((id) => getProduct(id)));
-    const map = {};
-    fetched.forEach((p) => (map[p.id] = p));
-    setProductsById(map);
-    setLoading(false);
+    const vendorIds = [...new Set(data.map((c) => c.vendor_id))];
+
+    const [fetchedProducts, fetchedVendors] = await Promise.all([
+      Promise.all(productIds.map((id) => getProduct(id))),
+      Promise.all(vendorIds.map((id) => getVendor(id))),
+    ]);
+
+    setProductsById(Object.fromEntries(fetchedProducts.map((p) => [p.id, p])));
+    setVendorsById(Object.fromEntries(fetchedVendors.map((v) => [v.id, v])));
   }
 
   useEffect(() => {
-    loadCarts();
+    loadCarts().finally(() => setInitialLoading(false));
   }, []);
 
-  async function handleQuantity(itemId, newQty) {
-    if (newQty < 1) return;
-    await updateCartItem(itemId, newQty);
-    loadCarts();
+  // Optimistic local update — no full page reload/loading flash
+  function setLocalQuantity(cartId, itemId, newQty) {
+    setCarts((prev) =>
+      prev.map((c) =>
+        c.id !== cartId
+          ? c
+          : {
+              ...c,
+              items: c.items.map((i) =>
+                i.id === itemId ? { ...i, quantity: newQty } : i,
+              ),
+            },
+      ),
+    );
+  }
+
+  async function handleIncrement(cartId, item) {
+    const newQty = item.quantity + 1;
+    setLocalQuantity(cartId, item.id, newQty);
+    await updateCartItem(item.id, newQty);
+  }
+
+  async function handleDecrement(cartId, item) {
+    if (item.quantity <= 1) return; // can't go below 1 — use trash icon to remove instead
+    const newQty = item.quantity - 1;
+    setLocalQuantity(cartId, item.id, newQty);
+    await updateCartItem(item.id, newQty);
   }
 
   async function handleRemove(itemId) {
     await removeCartItem(itemId);
-    loadCarts();
+    loadCarts(); // full refresh here is fine since a cart might disappear entirely
   }
 
-  if (loading)
+  if (initialLoading)
     return <p className="p-4 text-muted-foreground text-sm">Loading cart...</p>;
 
   if (carts.length === 0) {
@@ -65,8 +93,8 @@ export default function CartPage() {
             key={cart.id}
             className="bg-card border border-border rounded-2xl p-4"
           >
-            <p className="text-sm text-muted-foreground mb-2">
-              Vendor #{cart.vendor_id}
+            <p className="text-sm text-primary font-medium mb-2">
+              {vendorsById[cart.vendor_id]?.shop_name || "Shop"}
             </p>
             <div className="space-y-3">
               {cart.items.map((item) => {
@@ -91,9 +119,8 @@ export default function CartPage() {
                         size="icon"
                         variant="secondary"
                         className="w-7 h-7 active:scale-90 transition"
-                        onClick={() =>
-                          handleQuantity(item.id, item.quantity - 1)
-                        }
+                        onClick={() => handleDecrement(cart.id, item)}
+                        disabled={item.quantity <= 1}
                       >
                         <Minus className="w-3 h-3" />
                       </Button>
@@ -104,9 +131,7 @@ export default function CartPage() {
                         size="icon"
                         variant="secondary"
                         className="w-7 h-7 active:scale-90 transition"
-                        onClick={() =>
-                          handleQuantity(item.id, item.quantity + 1)
-                        }
+                        onClick={() => handleIncrement(cart.id, item)}
                       >
                         <Plus className="w-3 h-3" />
                       </Button>
