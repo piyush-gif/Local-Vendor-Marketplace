@@ -11,7 +11,6 @@ from schemas.order import OrderOut
 
 router = APIRouter(prefix="/checkout", tags=["checkout"])
 
-
 @router.post("/{vendor_id}", response_model=OrderOut)
 def checkout(
     vendor_id: int,
@@ -52,3 +51,11 @@ def checkout(
     db.commit()
     db.refresh(order)
     return order
+
+
+@router.get("/orders/mine", response_model=list[OrderOut])
+def my_orders(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.buyer)),
+):
+    return db.query(Order).filter(Order.buyer_id == current_user.id).all()

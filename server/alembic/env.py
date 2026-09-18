@@ -54,10 +54,13 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    ca_path = os.path.join(os.getcwd(), "ca.pem")
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args={"ssl": {"ca": ca_path}} if "aivencloud.com" in settings.database_url else {},
     )
 
     with connectable.connect() as connection:

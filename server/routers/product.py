@@ -41,6 +41,15 @@ def browse_products(
 
     return query.all()
 
+@router.get("/mine/list", response_model=List[ProductOut])
+def list_my_products(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.vendor)),
+):
+    vendor = db.query(Vendor).filter(Vendor.user_id == current_user.id).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor profile not found")
+    return db.query(Product).filter(Product.vendor_id == vendor.id).all()
 
 @router.get("/{product_id}", response_model=ProductOut)
 def get_product(product_id: int, db: Session = Depends(get_db)):

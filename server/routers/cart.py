@@ -95,6 +95,16 @@ def remove_cart_item(
     if not item:
         raise HTTPException(status_code=404, detail="Cart item not found")
 
+    cart_id = item.cart_id
     db.delete(item)
     db.commit()
-    return {"message": "Item removed from cart"}  
+
+    # If that was the last item, delete the now-empty cart too
+    remaining = db.query(CartItem).filter(CartItem.cart_id == cart_id).count()
+    if remaining == 0:
+        cart = db.query(Cart).filter(Cart.id == cart_id).first()
+        if cart:
+            db.delete(cart)
+            db.commit()
+
+    return {"message": "Item removed from cart"}

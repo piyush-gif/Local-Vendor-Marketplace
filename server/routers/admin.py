@@ -6,6 +6,8 @@ from core.deps import require_role
 from models.user import UserRole
 from models.vendor import Vendor, VendorStatus
 from schemas.user import UserOut
+from typing import List
+from models.user import User
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -42,3 +44,23 @@ def reject_vendor(
     vendor.status = VendorStatus.rejected
     db.commit()
     return {"message": "Vendor rejected"}
+
+
+@router.get("/vendors")
+def list_all_vendors(db: Session = Depends(get_db), _admin=Depends(require_role(UserRole.admin))):
+    vendors = db.query(Vendor).all()
+    result = []
+    for v in vendors:
+        owner = db.query(User).filter(User.id == v.user_id).first()
+        result.append({
+            "id": v.id,
+            "shop_name": v.shop_name,
+            "status": v.status,
+            "email": owner.email if owner else None,
+            "created_at": v.created_at,
+        })
+    return result
+
+@router.get("/users", response_model=List[UserOut])
+def list_all_users(db: Session = Depends(get_db), _admin=Depends(require_role(UserRole.admin))):
+    return db.query(User).all()
